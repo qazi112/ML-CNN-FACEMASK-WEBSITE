@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
+  <script src="https://requirejs.org/docs/release/2.3.5/minified/require.js"> </script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <title>Mask</title>
+ 
+  <!-- Bootstrap core CSS -->
+  <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Custom styles for this template -->
+  <link href="css/scrolling-nav.css" rel="stylesheet">
+  <link rel="stylesheet" href="stylesheet.css">
+  <script src="java.js"></script>
+
+  <script>
+    async function loadModel() {
+        model = undefined;
+        
+        model = await tf.loadLayersModel("http://127.0.0.1:5502/CNN_MODEL/model.json");
+        
+        console.log(model);
+      console.log("model loaded")
+    }
+    loadModel();
+  </script>
+</head>
+
+<body id="page-top">
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top" id="mainNav">
+    <div class="container">
+      <a class="navbar-brand " href="#page-top">Face Mask Classifier</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarResponsive">
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item">
+            <a class="nav-link " href="#about">About</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link js-scroll-trigger" href="#frame">My Drive</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link js-scroll-trigger" href="#predict">Git Hub</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <header class="bg-primary text-white">
+    <div class="container text-center">
+      <h1>This Model, Detects Mask on Face</h1>
+      <p class="lead">Wear Face Mask, Stay Safe :)</p>
+    </div>
+  </header>
+
+  <section id="about" class="mb-0" style="margin-top: 0%;">
+    <div class="container bg-primary p3">
+      <div class="row border-danger">
+        <div class="col-lg-9 m-auto justify-content-between">
+          <main class="main_full">
+            <div class="container">
+              <div class="panel">
+                <div class="button_outer">
+                  <div class="btn_upload">
+                    <input type="file" id="upload_file" name="myimage"  onchange="loadFile(event)" accept="image/*">
+                    Upload Image
+                  </div>
+                  <div class="processing_bar"></div>
+                  <div class="success_box"></div>
+                </div>
+              </div>
+              <div class="error_msg"></div>
+              <div class="uploaded_file_view" id="uploaded_view">
+                <span class="file_remove">X</span>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+    <div class="container mt-0 mb-2 p-3 bg-primary">
+      <div class="p-2">
+      <h3 id="feedback" class="text-white">Waiting For Result</h3>
+      <img src="covid.png" width="100px" height="100px" id="img-feedback" alt="">
+    </div>
+      <div class="row justify-content-center">
+        <div class="col-6 mt-0 mx-auto">
+          <canvas id="canvas">
+          </canvas>
+          <div id="output">
+            <img id="photo" class= "text-white p-2" alt="Frame Captured Will Be displayed">
+          </div>
+        </div>
+        
+      </div>
+      <div class="row">
+        <button style="display: none;" id="predict-btn"class="btn btn-danger" onclick="prediction()">Predict</button>
+      </div>
+    </div>
+
+ 
+  
+
+  <!-- Footer -->
+  <footer class="py-5 bg-dark">
+    <div class="container">
+      <p class="m-0 text-center text-white">Copyright &copy; Your Website 2020</p>
+    </div>
+    <!-- /.container -->
+  </footer>
+
+  <!-- Bootstrap core JavaScript -->
+  <script src="vendor/jquery/jquery.min.js"></script>
+  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Plugin JavaScript -->
+  <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+
+<script>
+  var loadFile = function(event) {
+	var image = document.getElementById('photo');
+  image.src = URL.createObjectURL(event.target.files[0]);
+  
+  console.log(document.getElementById("photo"));
+  setTimeout(function(){ 
+    console.log("Ready");
+    var butt = document.getElementById("predict-btn");
+  butt.style.display = "block";
+}, 3000);
+  
+};
+function prediction(){
+  setTimeout(function(){ 
+    console.log("Ready")
+}, 1000);
+  var feedback = document.getElementById("feedback");
+  feedback.innerHTML = "";
+  var photo = document.getElementById("photo");
+  var picture = tf.browser.fromPixels(photo) 
+  .mean(2)
+  .toFloat()
+  .expandDims(0)
+  .expandDims(-1)
+  console.log("Gere");
+  // console.log(hello.shape);
+  picture = tf.image.resizeBilinear(picture,[300,300]);
+  picture.dtype = "int32";
+  // console.log(picture);
+
+  var ans =  model.predict(picture);
+  console.log(ans);
+  const res = ans.dataSync();    
+  console.log(res);
+  if (res[0] > res[1])
+  {
+    console.log("No Mask");
+    feedback.innerHTML = "No Face Mask..!!!";
+    document.getElementById("img-feedback").setAttribute("src","nomask.webp");
+    
+  }else{
+    console.log("Face Mask detected");
+    feedback.innerHTML = "Face Mask Detected :)";
+    document.getElementById("img-feedback").setAttribute("src","mask.png");
+  }
+  document.getElementById("predict-btn").style.display = "none";
+  
+  setTimeout(function(){ 
+    document.getElementById("photo").setAttribute("src","");
+    document.getElementById("feedback").innerHTML ="Now Check New One,";
+    document.getElementById("img-feedback").setAttribute("src","covid.png");
+}, 5000);
+  
+}
+
+</script>
+
+</body>
+
+</html>

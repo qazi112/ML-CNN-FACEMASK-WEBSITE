@@ -1,0 +1,232 @@
+<!doctype html>
+
+<head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
+<script src="https://requirejs.org/docs/release/2.3.5/minified/require.js"> </script>
+     <!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+<!-- jQuery library -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+<!-- Popper JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+
+<!-- Latest compiled JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script> 
+    
+    
+    <style>
+    /* CSS comes here */
+    #video {
+        border: 1px solid black;
+        width: 320px;
+        height: 240px;
+    }
+
+    #photo {
+        border: 1px solid black;
+        width: 320px;
+        height: 240px;
+    }
+
+    #canvas {
+        display: none;
+    }
+
+    .camera {
+        width: 340px;
+        display: inline-block;
+    }
+
+    .output {
+        width: 340px;
+        display: inline-block;
+    }
+
+    #startbutton {
+        display: block;
+        position: relative;
+        margin-left: auto;
+        margin-right: auto;
+        bottom: 36px;
+        padding: 5px;
+        background-color: #6a67ce;
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        font-size: 14px;
+        color: rgba(255, 255, 255, 1.0);
+        cursor: pointer;
+    }
+
+    .contentarea {
+        font-size: 16px;
+        font-family: Arial;
+        text-align: center;
+    }
+    </style>
+    <title>Face Mask</title>
+</head>
+
+<body>
+    <div class="container" class="justify-content-between">
+    <div class="contentarea">
+        <h1>
+            Face Mask Classifier
+        </h1>
+        <div class="camera">
+            <video id="video">Video stream not available.</video>
+        </div>
+        <div><button id="startbutton">Take photo</button></div>
+        <canvas id="canvas"></canvas>
+        <div class="output">
+            <img id="photo" alt="Frame Captured Will Be displayed">
+        </div>
+    </div>
+    <button id="predict" style="display: none; align-self: center;" class= "btn-danger"onclick="prediction()">Make Predictions</button>
+    <div style="align-items: center; text-align: center;">
+        <h2 id="feedback" class="text-center text-success">
+
+        </h2>
+
+    </div>
+</div>
+    <script>
+    /* JS comes here */
+  
+
+        var width = 300; // We will scale the photo width to this
+        var height = 300; // This will be computed based on the input stream
+
+        var streaming = false;
+
+        var video = null;
+        var canvas = null;
+        var photo = null;
+        var startbutton = null;
+        // Load model
+        async function loadModel() {
+        model = undefined;
+        model = await tf.loadLayersModel("http://127.0.0.1:5500/updated_model_weigth/model.json");
+        console.log(model);
+      console.log("model loaded")
+    }
+    loadModel();
+    
+        function startup() {
+            
+            video = document.getElementById('video');
+            canvas = document.getElementById('canvas');
+            photo = document.getElementById('photo');
+            startbutton = document.getElementById('startbutton');
+            document.getElementById("feedback").innerHTML = "";
+            navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: false
+                })
+                .then(function(stream) {
+                    video.srcObject = stream;
+                    video.play();
+                })
+                .catch(function(err) {
+                    console.log("An error occurred: " + err);
+                });
+
+            video.addEventListener('canplay', function(ev) {
+                if (!streaming) {
+                    height = 300;
+
+                    if (isNaN(height)) {
+                        height = 300;
+                    }
+
+                    video.setAttribute('width', width);
+                    video.setAttribute('height', height);
+                    canvas.setAttribute('width', width);
+                    canvas.setAttribute('height', height);
+                    streaming = true;
+                }
+            }, false);
+
+            startbutton.addEventListener('click', function(ev) {
+                takepicture();
+                ev.preventDefault();
+            }, false);
+
+            // clearphoto();
+        }
+
+
+        function clearphoto() {
+            // var context = canvas.getContext('2d');
+            // context.fillStyle = "#AAA";
+            // context.fillRect(0, 0, canvas.width, canvas.height);
+
+            document.getElementById("photo").setAttribute("src","");
+            
+            
+        }
+
+        function takepicture() {
+            clearphoto();
+            document.getElementById("feedback").innerHTML = "";
+            // document.getElementById("photo").setAttribute("src","");
+            var context = canvas.getContext('2d');
+           
+                canvas.width = width;
+                canvas.height = height;
+                context.drawImage(video, 0, 0, width, height);
+
+                var data = canvas.toDataURL('image/png');
+                photo.setAttribute('src', data);
+                
+                var but = document.getElementById("predict");
+                setTimeout(function(){ 
+                    but.style.display = "block";
+                }, 2000);
+   
+                   
+        }
+        
+      function prediction(){
+        setTimeout(function(){ 
+            photo = document.getElementById("photo");
+            var picture = tf.browser.fromPixels(photo) 
+                .mean(2)
+                .toFloat()
+                .expandDims(0)
+                .expandDims(-1)
+                // console.log(hello.shape);
+                picture = tf.image.resizeBilinear(picture,[300,300]);
+                picture.dtype = "int32";
+             
+                var ans = model.predict(picture);
+                const res = ans.dataSync();
+                
+                console.log(ans);
+                console.log(res);
+                var feedback = document.getElementById("feedback");
+                if (res[0] > res[1])
+                {
+                    console.log("without mask");
+                    feedback.innerHTML = "No Face Mask... !!";
+                    feedback.color ="red";
+                    
+                }else{
+                    console.log("Mask");
+                    feedback.innerHTML = "Face Mask Detected :)"
+                }
+                document.getElementById("predict").style.display = "none";
+                document.getElementById("photo").setAttribute("src" ,"");
+        
+},1000);
+}    
+        
+
+        window.addEventListener('load', startup, false);
+    
+    </script>
+</body>
+
+</html>
